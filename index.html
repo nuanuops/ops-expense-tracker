@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Expense Tracker 2026</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --text:#1c2330; --muted:#667085; --line:#e4e7ec; --brand:#1f3864; --bar:#3d63a8; --warn:#d98324; --ok:#1a7f4b; --bad:#d92d20; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#10151f; --card:#1a2130; --text:#e8ecf3; --muted:#98a2b3; --line:#2b3446; --brand:#2c4a82; --bar:#6b8fd6; --warn:#f0a24a; --ok:#4ade80; --bad:#f87171; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1200px; margin:0 auto; padding:24px 16px 56px; }
+  header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  .sub { color:var(--muted); font-size:13px; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; }
+  button { background:var(--brand); color:#fff; border:0; padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+  button.small { padding:4px 8px; font-size:12px; }
+  button.danger { background:var(--bad); }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  .kpis .card { margin-bottom:0; }
+  .kpi .label { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .kpi .value { font-size:22px; font-weight:bold; }
+  .form { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  input, select { width:100%; padding:8px; font-size:14px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--text); }
+  .row-actions { margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  #msg { font-size:13px; }
+  .grid3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px; margin-bottom:16px; }
+  .grid3 .card { margin-bottom:0; }
+  .bar-row { margin-bottom:10px; font-size:13px; }
+  .bar-top { display:flex; justify-content:space-between; gap:8px; margin-bottom:3px; }
+  .bar-top span:last-child { color:var(--muted); white-space:nowrap; }
+  .track { height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+  .fill { height:100%; background:var(--bar); border-radius:4px; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { fill:var(--muted); font-size:11px; font-family:Arial,Helvetica,sans-serif; }
+  .tools { display:grid; grid-template-columns:2fr repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-bottom:12px; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:var(--brand); color:#fff; white-space:nowrap; cursor:pointer; user-select:none; }
+  .num { text-align:right; white-space:nowrap; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; color:#fff; }
+  .dupe { color:var(--bad); font-weight:bold; }
+  tfoot td { font-weight:bold; border-top:2px solid var(--line); }
+  .empty { padding:24px; text-align:center; color:var(--muted); }
+  @media print { .btns, .tools, .form-card, td:last-child, th:last-child { display:none; } body { background:#fff; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Operations Expense Tracker 2026</h1>
+      <div class="sub" id="source">Data is saved in this browser. Use Export CSV to back it up.</div>
+    </div>
+    <div class="btns">
+      <button class="ghost" id="exportBtn">Export CSV</button>
+      <button class="ghost" id="importBtn">Import CSV</button>
+      <input type="file" id="importFile" accept=".csv,text/csv" style="display:none">
+      <button class="ghost" id="resetBtn">Reset to sheet data</button>
+      <button onclick="window.print()">Print / PDF</button>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="card kpi"><div class="label">Total expenses</div><div class="value" id="kTotal"></div></div>
+    <div class="card kpi"><div class="label">Purchase orders</div><div class="value" id="kCount"></div></div>
+    <div class="card kpi"><div class="label">This month</div><div class="value" id="kMonth"></div></div>
+    <div class="card kpi"><div class="label">Opex</div><div class="value" id="kOpex"></div></div>
+    <div class="card kpi"><div class="label">Capex</div><div class="value" id="kCapex"></div></div>
+  </section>
+
+  <section class="card form-card">
+    <h2 id="formTitle">Add expense</h2>
+    <div class="form">
+      <div><label for="date">Date</label><input type="date" id="date"></div>
+      <div><label for="vendor">Partner / Vendor</label><input id="vendor"></div>
+      <div><label for="label">Description</label><input id="label"></div>
+      <div><label for="amount">Amount (IDR)</label><input type="number" id="amount" min="0" step="0.01"></div>
+      <div><label for="project">Project</label><input id="project" list="projects"><datalist id="projects"></datalist></div>
+      <div><label for="category">Category</label><input id="category" list="categories"><datalist id="categories"></datalist></div>
+      <div><label for="type">Type</label><select id="type"><option>Opex</option><option>Capex</option></select></div>
+      <div><label for="code">PO code</label><input id="code" placeholder="PO/2026/00000"></div>
+    </div>
+    <div class="row-actions">
+      <button id="saveBtn">Add expense</button>
+      <button class="ghost" id="cancelBtn" style="display:none">Cancel edit</button>
+      <span id="msg"></span>
+    </div>
+  </section>
+
+  <section class="grid3">
+    <div class="card"><h2>By project</h2><div id="byProject"></div></div>
+    <div class="card"><h2>By category</h2><div id="byCategory"></div></div>
+    <div class="card"><h2>By month</h2><div id="byMonth"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>Expenses</h2>
+    <div class="tools">
+      <input id="q" placeholder="Search vendor, description, PO code…">
+      <select id="fProject"></select>
+      <select id="fCategory"></select>
+      <select id="fType"><option value="">Opex + Capex</option><option>Opex</option><option>Capex</option></select>
+      <input type="date" id="fFrom" title="From date">
+      <input type="date" id="fTo" title="To date">
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th data-k="date">Date</th><th data-k="vendor">Vendor</th><th data-k="label">Description</th>
+          <th data-k="amount" class="num">Amount (IDR)</th><th data-k="project">Project</th><th data-k="category">Category</th>
+          <th data-k="type">Type</th><th data-k="code">PO code</th><th></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+        <tfoot><tr><td colspan="3" id="shownCount"></td><td class="num" id="shownTotal"></td><td colspan="5"></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">No expenses match your filters.</div>
+  </section>
+</main>
+
+<script>
+/* OPTIONAL: send every NEW expense to your Google Sheet as well.
+   Paste your Apps Script web app URL and token (WebApp.gs doPost). Leave API empty to keep data in this browser only. */
+const API = '';
+const TOKEN = '';
+
+/* Starting data: the "August - Sep" tab of Operations Budget Tracking 2026. */
+const SEED = [
+ ["2026-06-24","I Wayan Gede Jumi Arsawan","Kursi plastik, Set Lampu Tenda Keranjang, Meja + alang alang, Tenda + alang - alang",1453061.24,"Site Operations","Other Expense","Opex","PO/2026/03920"],
+ ["2026-07-22","I Ketut Suarjana","Ash Bus Stop Renovation",36057000.00,"Ash Bus Stop Renovation","Other Expense","Opex","PO/2026/04401"],
+ ["2026-08-03","J & N Wedding Design","Furniture Ash Bus Stop Furniture",15400000.00,"Ash Bus Stop Renovation","Other Expense","Opex","PO/2026/04694"],
+ ["2026-09-01","Tokopedia","Board Barrier Safety (Kuning Hitam)",1972000.00,"Site Operations","Other Expense","Opex","PO/2026/05122"],
+ ["2026-08-27","I Wayan Dwima Adinatha","Pengerjaan Mural Gardu Bridge 1 - 3 side (46.101 m2 x Rp.1.100.000); Gardu Bus Stop 6 Security Pos - 3 side (33.8 m2 x Rp.1.100.000); Gardu Ifarm 3 side (33.99 m2 x Rp.1.100.000)",135261641.03,"Mural at Gardu","Consultant Fee","Opex","PO/2026/05142"],
+ ["2026-08-26","Mohammad Haley Athaya","Pengerjaan Mural Gardu P3 - Sergey Project 59.92 m2 x Rp.650.000",38948000.00,"Mural at Gardu","Consultant Fee","Opex","PO/2026/05143"],
+ ["2026-08-27","I Komang Aris Suantara","Pengerjaan Mural Gardu P1 - Sergey Project (112.86 m2)",75282051.28,"Mural at Gardu","Consultant Fee","Opex","PO/2026/05144"],
+ ["2026-08-26","Made Nari Widnyani","Pengerjaan Mural Gardu di Lumeira (4x2.60 | 3.5x2.60) - Sergey Project",40000000.00,"Mural at Gardu","Consultant Fee","Opex","PO/2026/05145"],
+ ["2026-09-02","Bayu Samudra","Tangga Aluminium 3m",3402564.10,"Mural at Gardu","Consultant Fee","Opex","PO/2026/05268"],
+ ["2026-09-02","PT Sukses Sarana Scafolding","Sewa Scaffolding",7512022.52,"Mural at Gardu","Rental Equipment","Opex","PO/2026/05283"],
+ ["2026-09-03","PT Bumi Mas Bali Mulia","Kipas Angin Dinding Cosmos 16 - WFGR",1700000.03,"Ash Bus Stop Renovation","Other Expense","Opex","PO/2026/05315"],
+ ["2026-09-07","CV Manik Mas Gemilang","Payment for Kecak Dance Performance 11 September 2026 at Japanese Garden",6800000.00,"Kecak Performance","Other Expense","Opex","PO/2026/05365"],
+ ["2026-09-08","Berkah Bali","Cushion - Furniture Chair Furniture",500000.00,"Ash Bus Stop Renovation","Other Expense","Opex","PO/2026/05422"],
+ ["2026-09-11","Shopee","Display",196265.00,"Ash Bus Stop Renovation","Other Expense","Opex","PO/2026/05423"],
+ ["2026-09-09","Ni Kadek Desi Parwati","Shelf",1310000.00,"Ash Bus Stop Renovation","Other Expense","Opex","PO/2026/05438"],
+ ["2026-09-09","UD Toko Pasifik","Semen",530000.00,"New Bedeng","Other Expense","Opex","PO/2026/05441"],
+ ["2026-09-17","Taru Sumber Rejeki","Wooden benches for Gazebo",6000000.00,"Site Operations","Other Expense","Capex","PO/2026/05609"],
+ ["2026-09-17","Kadek Agus Wirya Arsana","Meals for Kecak Dance Performance 11 September 2026 at Japanese Garden",1230000.13,"Kecak Performance","Other Expense","Opex","PO/2026/05643"],
+ ["2026-09-29","Rochayadi","Container Storage 20FT",72000000.00,"Site Operations","Other Expense","Capex","PO/2026/05810"],
+ ["2026-09-25","PT Sejati Intertrans Logistic","Container Shipping",20662440.00,"Site Operations","Other Expense","Opex","PO/2026/05826"],
+ ["2026-09-29","I Wayan Dwima Adinatha","Additional Mural at Gardu Bridge 1; 16.7772m2 x Rp.700.000/m2",11744040.00,"Mural at Gardu","Consultant Fee","Capex","PO/2026/05853"],
+ ["2026-10-10","Evgenii Khmelev","AC Cover",7800000.00,"Site Operations","Other Expense","Capex","PO/2026/05972"],
+ ["2026-10-07","PT Moana Bali Indonesia","4 Pcs Batteries 20 V; 2 Pcs Leafblower; 1 Double Charger; 1 Suit Case",6400000.00,"Site Operations","Other Expense","Capex","PO/2026/06030"],
+ ["2026-10-07","Muhammad Harisin","Existing Building Survey & Master Plan Plotting Moana",5000000.00,"Site Operations","Other Expense","Opex","PO/2026/06033"],
+ ["2026-10-08","Perdana Berdikari","Rent crane moving container",11760000.00,"Site Operations","Other Expense","Opex","PO/2026/06043"],
+ ["2026-10-22","PT Ultra Komunindo Makmur Bersama","Ht & Accessories 6 unit",18600000.05,"Site Operations","Other Expense","Opex","PO/2026/06330"],
+ ["2026-10-23","OpenAI, LLC","OpenAI - ChatGPT Subscriptions for Mr. Brian, period October 2026",1889000.00,"Office Consumables","Subscriptions","Opex","PO/2026/06356"]
+];
+
+const STORAGE = 'ops-expenses-2026';
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const FIELDS = ['date','vendor','label','amount','project','category','type','code'];
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const short = n => { const a = Math.abs(n); return (n < 0 ? '-' : '') + (a >= 1e9 ? (a/1e9).toFixed(2)+' B' : a >= 1e6 ? (a/1e6).toFixed(1)+' M' : fmt(a)); };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const niceDate = iso => { const p = String(iso).split('-'); return p.length === 3 ? `${+p[2]} ${MON[+p[1]-1]} ${p[0]}` : iso; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function seedData() {
+  return SEED.map(r => ({ id: uid(), date:r[0], vendor:r[1], label:r[2], amount:r[3], project:r[4], category:r[5], type:r[6], code:r[7] }));
+}
+let expenses = load();
+let editingId = null;
+let sort = { key: 'date', dir: -1 };
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE);
+    if (raw) { const d = JSON.parse(raw); if (Array.isArray(d)) return d; }
+  } catch (e) {}
+  return seedData();
+}
+function save() { try { localStorage.setItem(STORAGE, JSON.stringify(expenses)); } catch (e) { say('Could not save in this browser.', 'bad'); } }
+function say(text, kind) {
+  $('msg').textContent = text;
+  $('msg').style.color = kind === 'bad' ? 'var(--bad)' : kind === 'ok' ? 'var(--ok)' : 'var(--muted)';
+}
+
+/* ---------- summary and charts ---------- */
+function sumBy(rows, fn) { const o = {}; rows.forEach(r => { const k = fn(r) || '(none)'; o[k] = (o[k] || 0) + Number(r.amount); }); return o; }
+
+function bars(el, obj, byKey) {
+  let e = Object.entries(obj);
+  e = byKey ? e.sort((a, b) => a[0].localeCompare(b[0])) : e.sort((a, b) => b[1] - a[1]);
+  const max = Math.max(...e.map(x => x[1]), 1);
+  $(el).innerHTML = e.map(([k, v]) =>
+    `<div class="bar-row"><div class="bar-top"><span>${esc(k)}</span><span>${fmt(v)}</span></div>` +
+    `<div class="track"><div class="fill" style="width:${(v / max * 100).toFixed(1)}%"></div></div></div>`).join('') || '<div class="sub">No data</div>';
+}
+
+function monthChart() {
+  const bym = sumBy(expenses, r => String(r.date).slice(0, 7));
+  const keys = Object.keys(bym).filter(k => /^\d{4}-\d\d$/.test(k)).sort();
+  if (!keys.length) { $('byMonth').innerHTML = '<div class="sub">No data</div>'; return; }
+  const months = [];
+  let [y, m] = keys[0].split('-').map(Number);
+  const [ly, lm] = keys[keys.length - 1].split('-').map(Number);
+  while (y < ly || (y === ly && m <= lm)) { months.push(y + '-' + String(m).padStart(2, '0')); if (++m > 12) { m = 1; y++; } }
+  const vals = months.map(k => bym[k] || 0), max = Math.max(...vals, 1);
+  const W = 400, H = 220, L = 44, T = 14, B = 30, iw = W - L - 8, ih = H - T - B, bw = iw / months.length;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spending by month">`;
+  for (let i = 0; i <= 4; i++) {
+    const yy = T + ih - ih * i / 4;
+    svg += `<line x1="${L}" x2="${W - 8}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${L - 5}" y="${yy + 4}" text-anchor="end">${short(max * i / 4)}</text>`;
+  }
+  vals.forEach((v, i) => {
+    const h = v / max * ih;
+    svg += `<rect x="${L + i * bw + bw * 0.2}" y="${T + ih - h}" width="${bw * 0.6}" height="${h}" rx="3" fill="var(--bar)"><title>${MON[+months[i].slice(5) - 1]}: ${fmt(v)}</title></rect>` +
+      `<text x="${L + i * bw + bw / 2}" y="${H - 10}" text-anchor="middle">${MON[+months[i].slice(5) - 1]}</text>`;
+  });
+  $('byMonth').innerHTML = svg + '</svg>';
+}
+
+function renderSummary() {
+  const total = expenses.reduce((s, r) => s + Number(r.amount), 0);
+  const opex = expenses.filter(r => r.type === 'Opex').reduce((s, r) => s + Number(r.amount), 0);
+  const capex = expenses.filter(r => r.type === 'Capex').reduce((s, r) => s + Number(r.amount), 0);
+  const now = new Date(), ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const month = expenses.filter(r => String(r.date).slice(0, 7) === ym).reduce((s, r) => s + Number(r.amount), 0);
+  $('kTotal').textContent = 'Rp ' + short(total); $('kTotal').title = 'Rp ' + fmt(total);
+  $('kCount').textContent = expenses.length;
+  $('kMonth').textContent = 'Rp ' + short(month);
+  $('kOpex').textContent = 'Rp ' + short(opex);
+  $('kCapex').textContent = 'Rp ' + short(capex);
+  bars('byProject', sumBy(expenses, r => r.project));
+  bars('byCategory', sumBy(expenses, r => r.category));
+  monthChart();
+
+  const uniq = fn => [...new Set(expenses.map(fn).filter(Boolean))].sort();
+  const opts = list => list.map(v => `<option value="${esc(v)}">`).join('');
+  $('projects').innerHTML = opts(uniq(r => r.project));
+  $('categories').innerHTML = opts(uniq(r => r.category));
+  const keep = (id, label, list) => {
+    const cur = $(id).value;
+    $(id).innerHTML = `<option value="">${label}</option>` + list.map(v => `<option>${esc(v)}</option>`).join('');
+    if (list.includes(cur)) $(id).value = cur;
+  };
+  keep('fProject', 'All projects', uniq(r => r.project));
+  keep('fCategory', 'All categories', uniq(r => r.category));
+}
+
+/* ---------- table ---------- */
+function filtered() {
+  const q = $('q').value.toLowerCase(), fp = $('fProject').value, fc = $('fCategory').value, ft = $('fType').value;
+  const from = $('fFrom').value, to = $('fTo').value;
+  return expenses.filter(r =>
+    (!fp || r.project === fp) && (!fc || r.category === fc) && (!ft || r.type === ft) &&
+    (!from || r.date >= from) && (!to || r.date <= to) &&
+    (!q || [r.vendor, r.label, r.project, r.category, r.code].join(' ').toLowerCase().includes(q)));
+}
+
+function renderTable() {
+  const codes = {};
+  expenses.forEach(r => { if (r.code) codes[r.code] = (codes[r.code] || 0) + 1; });
+  const k = sort.key;
+  const rows = filtered().sort((a, b) => {
+    const x = k === 'amount' ? Number(a[k]) : String(a[k] ?? '').toLowerCase();
+    const y = k === 'amount' ? Number(b[k]) : String(b[k] ?? '').toLowerCase();
+    return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
+  });
+  $('rows').innerHTML = rows.map(r =>
+    `<tr><td>${niceDate(r.date)}</td><td>${esc(r.vendor)}</td><td>${esc(r.label)}</td><td class="num">${fmt(r.amount)}</td>` +
+    `<td>${esc(r.project)}</td><td>${esc(r.category)}</td>` +
+    `<td><span class="tag" style="background:${r.type === 'Capex' ? 'var(--warn)' : 'var(--bar)'}">${esc(r.type)}</span></td>` +
+    `<td class="${codes[r.code] > 1 ? 'dupe' : ''}" ${codes[r.code] > 1 ? 'title="Duplicate PO code"' : ''}>${esc(r.code)}</td>` +
+    `<td class="num"><button class="small ghost" data-edit="${esc(r.id)}">Edit</button> <button class="small danger" data-del="${esc(r.id)}">Delete</button></td></tr>`).join('');
+  $('shownCount').textContent = rows.length + ' of ' + expenses.length + ' expenses shown';
+  $('shownTotal').textContent = fmt(rows.reduce((s, r) => s + Number(r.amount), 0));
+  $('empty').style.display = rows.length ? 'none' : 'block';
+}
+
+function renderAll() { renderSummary(); renderTable(); }
+
+/* ---------- form ---------- */
+function clearForm() {
+  ['vendor', 'label', 'amount', 'code'].forEach(id => $(id).value = '');
+  editingId = null;
+  $('formTitle').textContent = 'Add expense';
+  $('saveBtn').textContent = 'Add expense';
+  $('cancelBtn').style.display = 'none';
+}
+
+async function saveExpense() {
+  const r = {};
+  FIELDS.forEach(f => r[f] = $(f).value.trim());
+  r.amount = Number(r.amount);
+  if (!r.date || !r.vendor || !r.project || !(r.amount > 0)) { say('Date, vendor, project and amount (above 0) are required.', 'bad'); return; }
+  if (r.code && expenses.some(e => e.code === r.code && e.id !== editingId) && !confirm('PO code ' + r.code + ' already exists. Save anyway?')) return;
+
+  if (editingId) {
+    const i = expenses.findIndex(e => e.id === editingId);
+    if (i >= 0) expenses[i] = Object.assign({ id: editingId }, r);
+    save(); clearForm(); renderAll(); say('Changes saved.', 'ok');
+    return;
+  }
+  expenses.push(Object.assign({ id: uid() }, r));
+  save(); clearForm(); renderAll(); say('Expense added.', 'ok');
+
+  if (API) {
+    try {
+      const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ token: TOKEN }, r)) });
+      const d = await res.json();
+      say(d.ok ? 'Expense added and sent to Google Sheets.' : 'Added here, but the sheet said: ' + (d.error || 'error'), d.ok ? 'ok' : 'bad');
+    } catch (e) { say('Added here, but could not reach Google Sheets.', 'bad'); }
+  }
+}
+
+/* ---------- CSV ---------- */
+function toCsv() {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  return [FIELDS.join(',')].concat(expenses.map(r => FIELDS.map(f => q(r[f])).join(','))).join('\r\n');
+}
+function parseCsv(text) {
+  const rows = []; let row = [], cur = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; }
+    else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+function normDate(s) {
+  s = String(s).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return '';
+}
+function importCsv(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) { say('CSV has no data rows.', 'bad'); return; }
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const col = names => head.findIndex(h => names.includes(h));
+  const idx = { date: col(['date']), vendor: col(['vendor', 'partner / vendor', 'partner']), label: col(['label', 'description']),
+    amount: col(['amount', 'balance']), project: col(['project', 'projects']), category: col(['category', 'cat']),
+    type: col(['type', 'remarks']), code: col(['code', 'po code', 'po']) };
+  if (idx.date < 0 || idx.amount < 0 || idx.vendor < 0) { say('CSV needs at least Date, Vendor and Amount columns.', 'bad'); return; }
+  let added = 0, skipped = 0;
+  rows.slice(1).forEach(r => {
+    const get = k => idx[k] >= 0 ? (r[idx[k]] || '').trim() : '';
+    const amount = parseFloat(get('amount').replace(/[^\d.\-]/g, ''));
+    const date = normDate(get('date'));
+    if (!date || !(amount > 0) || !get('vendor')) { skipped++; return; }
+    const t = get('type').toLowerCase();
+    expenses.push({ id: uid(), date, vendor: get('vendor'), label: get('label'), amount, project: get('project'),
+      category: get('category'), type: t === 'capex' ? 'Capex' : 'Opex', code: get('code') });
+    added++;
+  });
+  save(); renderAll(); say(added + ' rows imported' + (skipped ? ', ' + skipped + ' skipped.' : '.'), added ? 'ok' : 'bad');
+}
+
+/* ---------- events ---------- */
+$('saveBtn').addEventListener('click', saveExpense);
+$('cancelBtn').addEventListener('click', () => { clearForm(); say('', ''); });
+$('rows').addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.edit) {
+    const r = expenses.find(x => x.id === t.dataset.edit);
+    if (!r) return;
+    FIELDS.forEach(f => $(f).value = r[f] ?? '');
+    editingId = r.id;
+    $('formTitle').textContent = 'Edit expense';
+    $('saveBtn').textContent = 'Save changes';
+    $('cancelBtn').style.display = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (t.dataset && t.dataset.del) {
+    const r = expenses.find(x => x.id === t.dataset.del);
+    if (r && confirm('Delete "' + r.vendor + ' - ' + fmt(r.amount) + '"?')) {
+      expenses = expenses.filter(x => x.id !== r.id);
+      if (editingId === r.id) clearForm();
+      save(); renderAll();
+    }
+  }
+});
+document.querySelector('thead').addEventListener('click', e => {
+  const k = e.target.dataset && e.target.dataset.k;
+  if (!k) return;
+  sort = { key: k, dir: sort.key === k ? -sort.dir : 1 };
+  renderTable();
+});
+['q', 'fProject', 'fCategory', 'fType', 'fFrom', 'fTo'].forEach(id => $(id).addEventListener('input', renderTable));
+$('exportBtn').addEventListener('click', () => {
+  const blob = new Blob(['\ufeff' + toCsv()], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'expenses-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$('importBtn').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => importCsv(String(rd.result).replace(/^\ufeff/, ''));
+  rd.readAsText(f);
+  e.target.value = '';
+});
+$('resetBtn').addEventListener('click', () => {
+  if (!confirm('Replace everything in this browser with the original sheet data? Your added or edited expenses will be lost.')) return;
+  expenses = seedData(); save(); clearForm(); renderAll(); say('Reset to sheet data.', 'ok');
+});
+
+$('date').valueAsDate = new Date();
+renderAll();
+</script>
+</body>
+</html>
